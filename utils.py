@@ -230,7 +230,6 @@ def gumbel(*size):
 def gumbel_like(x):
     return -(-torch.rand_like(x).log()).log()
 
-
 def gumbel_softmax_v2(x, tau=0.1, dim=-1, g=None):
     if g is None:
         g = gumbel_like(x)

@@ -222,13 +222,13 @@ if __name__ == "__main__":
         res_str = '{:s}&{:.4f}&{:.4f}&{:.4f}&{:.4f}&{:.4f}'.format(model_name, p_accuracy, p_nll, p_ece, p_adaece, p_cece)
 
         # Printing the required evaluation metrics
-        if args.log:
-            # print (conf_matrix)
-            print('Test ACC: ' + str(p_accuracy * 100))
-            print('Test NLL: ' + str(p_nll))
-            print('ECE Before T: ' + str(p_ece * 100))
-            print('AdaECE: ' + str(p_adaece))
-            print('Classwise ECE: ' + str(p_cece))
+        # if args.log:
+        #     # print (conf_matrix)
+        #     print('Test ACC: ' + str(p_accuracy * 100))
+        #     print('Test NLL: ' + str(p_nll))
+        #     print('ECE Before T: ' + str(p_ece * 100))
+        #     print('AdaECE: ' + str(p_adaece))
+        #     print('Classwise ECE: ' + str(p_cece))
 
         scaled_model = ModelWithTemperature(net, args.log)
         scaled_model.set_temperature(val_loader, cross_validate=cross_validation_error)
@@ -242,25 +242,25 @@ if __name__ == "__main__":
         nll = nll_criterion(logits, labels).item()
 
         res_str += '&{:.4f}({:.2f})&{:.4f}&{:.4f}&{:.4f}'.format(nll, T_opt, ece, adaece, cece)
+        #
+        # if args.log:
+        #     print('Optimal temperature: ' + str(T_opt))
+        #     # print (conf_matrix)
+        #     # print ('Test ACC: ' + str(p_accuracy))
+        #     print('Test NLL: ' + str(nll))
+        #     print('ECE After T: ' + str(ece * 100))
+        #     print('AdaECE: ' + str(adaece))
+        #     print('Classwise ECE: ' + str(cece))
+        #
+        # # Test NLL & ECE & AdaECE & Classwise ECE
+        # print('&{:.2f}&{:.2f}&{:.2f}({:.1f})&{:.2f}&{:.2f}({:.1f})&{:.2f}&{:.2f}({:.1f})&{:.2f}&{:.2f}({:.1f})'.format(
+        #     (1-p_accuracy)*100,
+        #     p_ece * 100, ece * 100, T_opt,
+        #     p_adaece* 100, adaece* 100, T_opt,
+        #     p_cece* 100, cece* 100, T_opt,
+        #     p_nll* 100, nll* 100, T_opt))
 
-        if args.log:
-            print('Optimal temperature: ' + str(T_opt))
-            # print (conf_matrix)
-            # print ('Test ACC: ' + str(p_accuracy))
-            print('Test NLL: ' + str(nll))
-            print('ECE After T: ' + str(ece * 100))
-            print('AdaECE: ' + str(adaece))
-            print('Classwise ECE: ' + str(cece))
-
-        # Test NLL & ECE & AdaECE & Classwise ECE
-        print('&{:.2f}&{:.2f}&{:.2f}({:.1f})&{:.2f}&{:.2f}({:.1f})&{:.2f}&{:.2f}({:.1f})&{:.2f}&{:.2f}({:.1f})'.format(
-            (1-p_accuracy)*100,
-            p_ece * 100, ece * 100, T_opt,
-            p_adaece* 100, adaece* 100, T_opt,
-            p_cece* 100, cece* 100, T_opt,
-            p_nll* 100, nll* 100, T_opt))
-
-        return p_ece, p_accuracy, p_nll
+        return p_ece, p_accuracy, p_nll, ece, accuracy, nll
 
     lr = args.lr
     optimizer = torch.optim.SGD(
@@ -273,20 +273,34 @@ if __name__ == "__main__":
 
 
 
-    print("Program is running on cuda device ", torch.cuda.current_device())
-    combination = [int(i) for i in args.combination.split(',')]
-    args.weight_folder = "../weights/{}/{}".format(args.dataset, args.model)
-    net.load_combination_weight(combination, args.weight_folder, model_name)
+    # print("Program is running on cuda device ", torch.cuda.current_device())
+    # combination = [int(i) for i in args.combination.split(',')]
+    # args.weight_folder = "../weights/{}/{}".format(args.dataset, args.model)
+    # net.load_combination_weight(combination, args.weight_folder, model_name)
+    #
+    #
+    # for epoch in range(args.tune_epoch):
+    #     print("-" * 50, "TRAIN {} EPOCH   LR{}".format(epoch+1, lr),  "-" * 50)
+    #
+    #     train_loss = train_single_epoch(epoch,
+    #                                     net,
+    #                                     train_loader,
+    #                                     optimizer,
+    #                                     device)
+    #
+    #     test_performance()
 
-    for epoch in range(args.tune_epoch):
-        print("-" * 50, "TRAIN {} EPOCH   LR{}".format(epoch+1, lr),  "-" * 50)
-
-        train_loss = train_single_epoch(epoch,
-                                        net,
-                                        train_loader,
-                                        optimizer,
-                                        device)
-
-        test_performance()
-
+    pre_ece = list(range(350))
+    pre_acc = list(range(350))
+    pre_nll = list(range(350))
+    post_ece = list(range(350))
+    post_acc = list(range(350))
+    post_nll = list(range(350))
+    args.log = False
+    for i in range(350):
+        combination = [i, i, i, i, i]
+        args.weight_folder = "../weights/{}/{}".format(args.dataset, args.model)
+        net.load_combination_weight(combination, args.weight_folder, model_name)
+        pre_ece[i], pre_acc[i], pre_nll[i], post_ece[i], post_acc[i], post_nll[i] = test_performance()
+        print(i, pre_ece[i], pre_acc[i], pre_nll[i], post_ece[i], post_acc[i], post_nll[i])
 
