@@ -25,27 +25,22 @@ import torch.nn as nn
 import torch.utils
 from scipy.stats import kendalltau
 from torch.nn import functional as F
-from metrics.ece import expected_calibration_error, test_classification_net
+from metrics.metrics import expected_calibration_error, test_classification_net
 
 import utils
 from module.architect import Architect
-from module.estimator.estimator import Estimator, PredictorForGraph
-from module.estimator.gnn.decoder import LinearDecoder
-from module.estimator.gnn.encoder import GINEncoder
-from module.estimator.gnn.gae import GAEExtractor
-from module.estimator.gnn.loss import ReconstructedLoss
+
 from module.estimator.memory import Memory
-from module.estimator.population import Population
 from module.estimator.predictor import Predictor, Predictor2head, weighted_loss
-from module.estimator.utils import GraphPreprocessor
-from utils import gumbel_like, gpu_usage, DimensionImportanceWeight
+from utils import gumbel_like, gpu_usage
 
 # Import metrics to compute
-from metrics.ece import test_classification_net_logits
-from metrics.ece import ECELoss, AdaptiveECELoss, ClasswiseECELoss, get_logits_labels
+from metrics.metrics import test_classification_net_logits
+from metrics.metrics import ECELoss, AdaptiveECELoss, ClasswiseECELoss, get_logits_labels
 
 # Import temperature scaling and NLL utilities
 from temperature_scaling import ModelWithTemperature
+
 
 def main():
     if not torch.cuda.is_available():
@@ -53,13 +48,14 @@ def main():
         sys.exit(1)
 
     # enable GPU and set random seeds
-    np.random.seed(args.seed)                  # set random seed: numpy
+    np.random.seed(args.seed)  # set random seed: numpy
     torch.cuda.set_device(args.gpu)
     cudnn.benchmark = False
     cudnn.deterministic = True
 
     args.weight_root = "../weights/{}/{}".format(args.dataset_name, args.model_name)
-    args.load_memory = "../checkpoints/{}-{}".format(args.dataset_name, args.model_name) if not args.load_memory=="build_memory" else None
+    args.load_memory = "../checkpoints/{}-{}".format(args.dataset_name,
+                                                     args.model_name) if not args.load_memory == "build_memory" else None
     # Taking input for the dataset
 
     CIFAR_CLASSES = 10
@@ -93,14 +89,12 @@ def main():
         'laplaceSampling': laplaceSampling
     }
 
-
-
     dataset = args.dataset_name
     num_classes = dataset_num_classes[dataset]
     sampling_strategy = sampling_strategies[args.sampling_strategy]
-    torch.manual_seed(args.seed)               # set random seed: torch
-    cudnn.enabled=True
-    torch.cuda.manual_seed(args.seed)          # set random seed: torch.cuda
+    torch.manual_seed(args.seed)  # set random seed: torch
+    cudnn.enabled = True
+    torch.cuda.manual_seed(args.seed)  # set random seed: torch.cuda
     logging.info('gpu device = %d' % args.gpu)
     logging.info("args = %s", args)
     if len(unknown_args) > 0:
@@ -113,30 +107,25 @@ def main():
 
     # build the model with model_search.Network
     logging.info("init arch param")
-    model = models[args.model_name](criterion=criterion, tau=args.tau, weight_root=args.weight_root, num_classes=num_classes)
+    model = models[args.model_name](criterion=criterion, tau=args.tau, weight_root=args.weight_root,
+                                    num_classes=num_classes)
     model = model.to('cuda')
     model.ops = sampling_strategy(args.sampling_param)
     model.initialize_alphas()
     print("sampling_strategy: {}({})".format(args.sampling_strategy, args.sampling_param), model.ops)
     logging.info("model param size = %fMB", utils.count_parameters_in_MB(model))
 
-
-    diw = DimensionImportanceWeight(model=model, v_type='mean') if args.diw else None
-
     # use SGD to optimize the model (optimize model.parameters())
     optimizer = torch.optim.SGD(
-                model.parameters(),
-                lr=args.ftlr,
-                momentum=0.9,
-                weight_decay=1e-4,
-                nesterov=False
-            )
-
+        model.parameters(),
+        lr=args.ftlr,
+        momentum=0.9,
+        weight_decay=1e-4,
+        nesterov=False
+    )
 
     args.data_aug = True
     args.test_batch_size = 64
-
-
 
     if (dataset == 'tiny_imagenet'):
         dataset_root = "../datasets/tiny-imagenet-200"
@@ -174,7 +163,6 @@ def main():
             num_workers=1
         )
 
-
     # construct architect with architect.Architect
     _, feature_num = torch.vstack(model.arch_parameters()).shape
     if args.acceceloss:
@@ -183,50 +171,23 @@ def main():
         preprocessor = None
         # -- build model --
         predictor = Predictor2head(input_size=feature_num, hidden_size=args.predictor_hidden_state, head=2)
-        predictor = predictor.to('cuda')
-        reconstruct_criterion = None
-    elif args.predictor_type == 'lstm':
-        is_gae = False
-        # -- preprocessor --
-        preprocessor = None
-        # -- build model --
-        predictor = Predictor(input_size=feature_num, hidden_size=args.predictor_hidden_state)
-        predictor = predictor.to('cuda')
-        reconstruct_criterion = None
-    elif args.predictor_type == 'gae':
-        is_gae = True
-        # -- preprocessor --
-        preprocessor = GraphPreprocessor(mode=args.preprocess_mode, lamb=args.preprocess_lamb)
-        # -- build model --
-        predictor = Estimator(
-            extractor=GAEExtractor(
-                encoder=GINEncoder(
-                    input_dim=args.opt_num, hidden_dim=args.hidden_dim, latent_dim=args.latent_dim,
-                    num_layers=args.num_layers, num_mlp_layers=args.num_mlp_layers
-                ),
-                decoder=LinearDecoder(
-                    latent_dim=args.latent_dim, decode_dim=args.opt_num, dropout=args.dropout,
-                    activation_adj=torch.sigmoid, activation_opt=torch.softmax
-                )
-            ),
-            predictor=PredictorForGraph(in_features=args.latent_dim * 2, out_features=1)
-        )
-        predictor = predictor.to('cuda')
-        reconstruct_criterion = ReconstructedLoss(
-            loss_opt=torch.nn.BCELoss(), loss_adj=F.mse_loss, w_opt=1.0, w_adj=1.0
-        )
-    else:
-        raise ValueError('unknown estimator type: %s' % args.predictor_type)
+    # -- build model --
+    predictor = Predictor(input_size=feature_num, hidden_size=args.predictor_hidden_state)
+    predictor = predictor.to('cuda')
+    reconstruct_criterion = None
     if args.acceceloss:
         logging.info('using accece loss for predictor')
+
         def acceceloss(out, target):
-            acc_loss = F.mse_loss(out[:,0], target[:,0])
-            ece_loss = F.mse_loss(out[:,1], target[:,1])
+            acc_loss = F.mse_loss(out[:, 0], target[:, 0])
+            ece_loss = F.mse_loss(out[:, 1], target[:, 1])
             return acc_loss + args.accecelamda * ece_loss
+
         def arch_acceceloss(out, target):
-            acc_loss = F.mse_loss(out[:,0], target[:,0])
-            ece_loss = F.mse_loss(out[:,1], target[:,1])
+            acc_loss = F.mse_loss(out[:, 0], target[:, 0])
+            ece_loss = F.mse_loss(out[:, 1], target[:, 1])
             return acc_loss + args.arch_accecelamda * ece_loss
+
         predictor_criterion = acceceloss
         architecture_criterion = arch_acceceloss
 
@@ -244,14 +205,13 @@ def main():
         arch_learning_rate=args.arch_learning_rate, arch_weight_decay=args.arch_weight_decay,
         predictor=predictor, pred_learning_rate=args.pred_learning_rate,
         architecture_criterion=architecture_criterion, predictor_criterion=predictor_criterion,
-        is_gae=is_gae, reconstruct_criterion=reconstruct_criterion, preprocessor=preprocessor, arch_optim = args.arch_optim,
+        reconstruct_criterion=reconstruct_criterion,
+        arch_optim=args.arch_optim,
         args=args
     )
 
-    if args.evolution:
-        memory = Population(batch_size=args.predictor_batch_size, tau=args.tau, is_gae=is_gae)
-    else:
-        memory = Memory(limit=args.memory_size, batch_size=args.predictor_batch_size, is_gae=is_gae, multiperformance=True)
+    memory = Memory(limit=args.memory_size, batch_size=args.predictor_batch_size,
+                        multiperformance=True)
 
     # --- Part 1: model warm-up and build memory---
     # 1.1 model warm-up
@@ -289,7 +249,7 @@ def main():
             if not args.notrain:
                 model_train(train_queue, model, criterion, optimizer, name='build memory')
             # valid model
-                # test result
+            # test result
             valid_conf_matrix, valid_acc, valid_labels, valid_predictions, valid_confidences, valid_loss = test_classification_net(
                 model,
                 valid_queue)
@@ -302,20 +262,12 @@ def main():
                     valid_loss,
                     valid_ece,
                     valid_acc)
-                )
+            )
 
-            if args.evolution:
-                memory.append(individual=(model.alphas.detach().clone(), model.gumbel.detach().clone()),
-                              fitness=(
-                                  torch.tensor(valid_acc, dtype=torch.float32).to('cuda'),
-                                  torch.tensor(valid_ece, dtype=torch.float32).to('cuda'),
-                                  torch.tensor(valid_loss, dtype=torch.float32).to('cuda')
-                              ))
-            else:
-                memory.append(weights=model.arch_weights(cat=False).detach(),
-                          loss=(torch.tensor(valid_acc, dtype=torch.float32).to('cuda'),
-                                torch.tensor(valid_ece, dtype=torch.float32).to('cuda'),
-                                torch.tensor(valid_loss, dtype=torch.float32).to('cuda')))
+            memory.append(weights=model.arch_weights(cat=False).detach(),
+                              loss=(torch.tensor(valid_acc, dtype=torch.float32).to('cuda'),
+                                    torch.tensor(valid_ece, dtype=torch.float32).to('cuda'),
+                                    torch.tensor(valid_loss, dtype=torch.float32).to('cuda')))
             # checkpoint: model, memory
             utils.save(model, os.path.join(args.save, 'model-weights-valid.pt'))
             utils.pickle_save(memory.state_dict(),
@@ -341,12 +293,11 @@ def main():
         if args.acceceloss:
             pred_train_loss, acc_true, ece_true, loss_true, pred_acc, pred_ece = predictor_train(architect, memory)
             if epoch % args.report_freq == 0 or epoch == args.predictor_warm_up:
-                logging.info('[warm-up predictor] epoch %d/%d loss=%.4f', epoch, args.predictor_warm_up, pred_train_loss)
+                logging.info('[warm-up predictor] epoch %d/%d loss=%.4f', epoch, args.predictor_warm_up,
+                             pred_train_loss)
                 acc_tau = kendalltau(acc_true.detach().to('cpu'), pred_acc.detach().to('cpu'))[0]
                 ece_tau = kendalltau(ece_true.detach().to('cpu'), pred_ece.detach().to('cpu'))[0]
                 logging.info('acc kendall\'s-tau=%.4f   ece kendall\'s-tau=%.4f', acc_tau, ece_tau)
-                # save predictor
-                utils.save(architect.predictor, os.path.join(args.save, 'predictor-warm-up.pt'))
         else:
             pred_train_loss, acc_true, ece_true, loss_true, pred_loss = predictor_train(architect, memory)
             if epoch % args.report_freq == 0 or epoch == args.predictor_warm_up:
@@ -354,29 +305,20 @@ def main():
                              pred_train_loss)
                 tau = kendalltau(loss_true.detach().to('cpu'), pred_loss.detach().to('cpu'))[0]
                 logging.info('loss kendall\'s-tau=%.4f', tau)
-                # save predictor
-                utils.save(architect.predictor, os.path.join(args.save, 'predictor-warm-up.pt'))
+        # save predictor
+        utils.save(architect.predictor, os.path.join(args.save, 'predictor-warm-up.pt'))
 
     # gpu info
     gpu_usage()
 
-
     # --- Part 3 architecture search ---
     for epoch in range(args.epochs):
-
         # search
         architecture_search(train_queue, valid_queue, test_queue, model, architect,
-                                                     criterion, optimizer, memory, diw=diw, epoch=epoch, architect_performance_dict=architect_performance_dict)
+                            criterion, optimizer, memory, epoch=epoch,
+                            architect_performance_dict=architect_performance_dict)
         # save weights
         utils.save(model, os.path.join(args.save, 'model-weights-search.pt'))
-
-
-def log_genotype(model):
-    # log genotype (i.e. alpha)
-    genotype = model.genotype()
-    logging.info('genotype = %s', genotype)
-    logging.info('alphas_normal: %s\n%s', torch.argmax(model.alphas_normal, dim=-1), model.alphas_normal)
-    logging.info('alphas_reduce: %s\n%s', torch.argmax(model.alphas_reduce, dim=-1), model.alphas_reduce)
 
 
 def model_train(train_queue, model, criterion, optimizer, name):
@@ -447,16 +389,14 @@ def model_valid(valid_queue, model, criterion, name):
         top5.update(prec5.data.item(), n)
         # log
         # if step % args.report_freq == 0:
-            # logging.info('[%s] valid model %03d/%03d loss=%.4f top1-acc=%.4f top5-acc=%.4f',
-            #              name, step, total_steps, objs.avg, top1.avg, top5.avg)
+        # logging.info('[%s] valid model %03d/%03d loss=%.4f top1-acc=%.4f top5-acc=%.4f',
+        #              name, step, total_steps, objs.avg, top1.avg, top5.avg)
     val_ece = expected_calibration_error(confidence_vals_list, predictions_list, labels_list, num_bins=15)
 
     return objs.avg, top1.avg, top5.avg, val_ece
 
 
-
 def predictor_train(architect, memory, unsupervised=False):
-    # TODO: add support for gae predictor training
     objs = utils.AverageMeter()
     batch = memory.get_batch(EA=args.evolution)
     all_acc = []
@@ -468,15 +408,17 @@ def predictor_train(architect, memory, unsupervised=False):
     for x, acc, ece, loss in batch:
         n = acc.size(0)
         if args.acceceloss:
-            y_pred, predictor_train_loss = architect.predictor_step(x, torch.swapaxes(torch.stack([acc, ece]), 0, 1), unsupervised=unsupervised, accece=True)
-            pred_acc, pred_ece = y_pred[:,0], y_pred[:,1]
+            y_pred, predictor_train_loss = architect.predictor_step(x, torch.swapaxes(torch.stack([acc, ece]), 0, 1),
+                                                                    unsupervised=unsupervised, accece=True)
+            pred_acc, pred_ece = y_pred[:, 0], y_pred[:, 1]
             objs.update(predictor_train_loss.data.item(), n)
             all_acc.append(acc)
             all_ece.append(ece)
             all_loss.append(loss)
             all_p_acc.append(pred_acc)
             all_p_ece.append(pred_ece)
-            return objs.avg, torch.cat(all_acc), torch.cat(all_ece), all_loss, torch.cat(all_p_acc), torch.cat(all_p_ece)
+            return objs.avg, torch.cat(all_acc), torch.cat(all_ece), all_loss, torch.cat(all_p_acc), torch.cat(
+                all_p_ece)
 
         else:
             y_pred, predictor_train_loss = architect.predictor_step(x, loss, unsupervised=unsupervised, accece=True)
@@ -489,17 +431,10 @@ def predictor_train(architect, memory, unsupervised=False):
 
 
 def architecture_search(train_queue, valid_queue, test_queue, model, architect, criterion, optimizer, memory,
-                        diw: Optional[DimensionImportanceWeight]=None, epoch=None, architect_performance_dict=None):
-
-
+                        epoch=None, architect_performance_dict=None):
     # -- train model --
-    if diw is not None and diw.num > 0:
-        diw_value = diw.get_diw()  # diw weight
-        gsw = 1. - diw_value  # gumbel sampling weight
-    else:
-        gsw = 1.  # gumbel sampling weight
-    model.gumbel = gumbel_like(model.alphas) * args.gumbel_scale * gsw
-    arch_str = str(torch.max(model.arch_weights(cat=False),-1).indices.tolist())
+    model.gumbel = gumbel_like(model.alphas) * args.gumbel_scale
+    arch_str = str(torch.max(model.arch_weights(cat=False), -1).indices.tolist())
 
     if arch_str in architect_performance_dict:
         arch_performance = architect_performance_dict[arch_str]
@@ -517,10 +452,8 @@ def architecture_search(train_queue, valid_queue, test_queue, model, architect, 
 
         valid_ece = expected_calibration_error(valid_confidences, valid_predictions, valid_labels, num_bins=15)
         arch_performance = (torch.tensor(valid_acc, dtype=torch.float32).to('cuda'),
-                torch.tensor(valid_ece, dtype=torch.float32).to('cuda'),
-                torch.tensor(valid_loss, dtype=torch.float32).to('cuda'))
-
-
+                            torch.tensor(valid_ece, dtype=torch.float32).to('cuda'),
+                            torch.tensor(valid_loss, dtype=torch.float32).to('cuda'))
 
     # -- test model --
     p_accuracy, p_ece, a_ece, T_opt, test_loss = test_performance(valid_queue, test_queue, model)
@@ -533,17 +466,15 @@ def architecture_search(train_queue, valid_queue, test_queue, model, architect, 
 
     else:
         memory.append(weights=model.arch_weights(cat=False).detach(),
-                      loss = arch_performance)
+                      loss=arch_performance)
 
     architect_performance_dict[arch_str] = arch_performance
     valid_acc = arch_performance[0]
     valid_ece = arch_performance[1]
     valid_loss = arch_performance[2]
 
-
     utils.pickle_save(memory.state_dict(),
                       os.path.join(args.save, 'memory-search.pickle'))
-
 
     # -- predictor train --
     architect.predictor.train()
@@ -557,35 +488,34 @@ def architecture_search(train_queue, valid_queue, test_queue, model, architect, 
         else:
             pred_train_loss, acc_true, ece_true, loss_true, pred_loss = predictor_train(architect, memory)
             tau = kendalltau(loss_true.detach().to('cpu'), pred_loss.detach().to('cpu'))[0]
-            if tau > 0.95 : break
+            if tau > 0.95: break
 
-
-    logging.info('EPOCH %d: alpha=%s, alpha+gumbel=%s, valid_acc=%.4f, valid_ece=%.2f, valid_loss=%.4f, test_acc=%.4f, test_ece=%.2f, test_ece(T)=%.2f(%.2f), test_loss=%.4f, alpha_max=%.4f, gumbel_max=%.4f, lr=%.8f' % (
-        epoch,
-        model.ops[torch.max(architect.model.arch_parameters()[0],-1).indices.tolist()],
-        model.ops[torch.max(architect.model.arch_weights(cat=False),-1).indices.tolist()],
-        valid_acc,
-        valid_ece*100,
-        valid_loss,
-        p_accuracy,
-        p_ece*100,
-        a_ece*100,
-        T_opt,
-        test_loss,
-        model.alphas.max(),
-        model.gumbel.max(),
-        optimizer.state_dict()['param_groups'][0]['lr']
-    ))
+    logging.info(
+        'EPOCH %d: alpha=%s, alpha+gumbel=%s, valid_acc=%.4f, valid_ece=%.2f, valid_loss=%.4f, test_acc=%.4f, test_ece=%.2f, test_ece(T)=%.2f(%.2f), test_loss=%.4f, alpha_max=%.4f, gumbel_max=%.4f, lr=%.8f' % (
+            epoch,
+            model.ops[torch.max(architect.model.arch_parameters()[0], -1).indices.tolist()],
+            model.ops[torch.max(architect.model.arch_weights(cat=False), -1).indices.tolist()],
+            valid_acc,
+            valid_ece * 100,
+            valid_loss,
+            p_accuracy,
+            p_ece * 100,
+            a_ece * 100,
+            T_opt,
+            test_loss,
+            model.alphas.max(),
+            model.gumbel.max(),
+            optimizer.state_dict()['param_groups'][0]['lr']
+        ))
 
     # -- architecture update --
     if args.evolution:
         index, weights, fitness = memory.select('lowest')
-        alphas, gumbel= weights
+        alphas, gumbel = weights
         model.gumbel.data = alphas
         model.gumbel = gumbel
     loss, y_pred = architect.step()
     # print("arch_creterion:", loss, "prediction",y_pred)
-
 
     if diw is not None:
         diw.update()
@@ -605,7 +535,6 @@ def test_performance(val_loader, test_loader, net):
     p_cece = cece_criterion(logits, labels).item()
     p_nll = nll_criterion(logits, labels).item()
 
-
     scaled_model = ModelWithTemperature(net)
     scaled_model.set_temperature(val_loader, cross_validate='ece')
     T_opt = scaled_model.get_temperature()
@@ -618,7 +547,6 @@ def test_performance(val_loader, test_loader, net):
     nll = nll_criterion(logits, labels).item()
 
     return p_accuracy, p_ece, ece, T_opt, p_nll
-
 
 
 if __name__ == '__main__':
@@ -657,19 +585,15 @@ if __name__ == '__main__':
     parser.add_argument('--evolution', action='store_true', default=False, help='use weighted loss')
     parser.add_argument('--pareto', action='store_true', default=False, help='use pareto front')
     parser.add_argument('--smooth', action='store_true', default=False, help='use smooth')
-    parser.add_argument('--diw', action='store_true', default=False, help='dimension importance aware')
-    parser.add_argument('--reduce_memory_before_arch_train_by_size', type=int, default=None, help='reduce_memory_before_arch_train')
-    parser.add_argument('--reduce_memory_before_arch_train_by_loss_limit', type=float, default=None, help='reduce_memory_before_arch_train_by_loss_limit')
+    parser.add_argument('--reduce_memory_before_arch_train_by_size', type=int, default=None,
+                        help='reduce_memory_before_arch_train')
+    parser.add_argument('--reduce_memory_before_arch_train_by_loss_limit', type=float, default=None,
+                        help='reduce_memory_before_arch_train_by_loss_limit')
     parser.add_argument('--arch_optim', type=str, default='adam', help='arch_optim')
     parser.add_argument('--sampling_strategy', type=str, default='all')
     parser.add_argument('--sampling_param', type=int, default=10)
 
-
-
-
-
     # predictor setting
-    parser.add_argument('--predictor_type', type=str, default='lstm')
     parser.add_argument('--predictor_warm_up', type=int, default=500, help='predictor warm-up steps')
     parser.add_argument('--predictor_hidden_state', type=int, default=16, help='predictor hidden state')
     parser.add_argument('--predictor_batch_size', type=int, default=64, help='predictor batch size')
@@ -688,10 +612,6 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', type=str, default=None)
     parser.add_argument('--ftlr', type=float, default=1e-4, help='fine tune learning rate')
 
-
-
-
-
     # gumbel setting
     parser.add_argument('--gumbel_scale', type=float, default=10e-0, help='gumbel_scale')
 
@@ -700,7 +620,6 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=1, help='random seed')
     parser.add_argument('--debug', action='store_true', default=False, help='set logging level to debug')
     parser.add_argument('--dataset_name', type=str, default=None)
-
 
     # GAE related
     parser.add_argument('--opt_num', type=int, default=11)

@@ -21,8 +21,8 @@ from module.wide_resnet import wide_resnet_cifar
 from module.densenet import densenet121
 
 # Import metrics to compute
-from metrics.ece import test_classification_net_logits
-from metrics.ece import ECELoss, AdaptiveECELoss, ClasswiseECELoss
+from metrics.metrics import test_classification_net_logits
+from metrics.metrics import ECELoss, AdaptiveECELoss, ClasswiseECELoss
 
 # Import temperature scaling and NLL utilities
 from temperature_scaling import ModelWithTemperature

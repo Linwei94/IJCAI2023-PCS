@@ -155,6 +155,25 @@ class Wide_ResNet_Cifar(nn.Module):
 
         return self.ops[index.cpu()]
 
+    def load_combination_weight(self, combination, weight_folder, model_name):
+        self.weight_root=weight_folder
+        saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, 350)
+        model_dict = torch.load(str(saved_model_name))
+        self.load_state_dict(model_dict, strict=False)
+
+        for block_name in self.block_names:
+            idx = self.block_names.index(block_name)
+            saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, combination[0] + 1)
+            model_dict = torch.load(str(saved_model_name))
+            if block_name == 'fc':
+                modified_dict = {k[3:]: v for k, v in model_dict.items() if k.startswith(block_name)}
+                model_dict.update(modified_dict)
+            else:
+                modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith(block_name)}
+                model_dict.update(modified_dict)
+            getattr(self, block_name).load_state_dict(model_dict, strict=False)
+
+
     def load_gumbel_weight(self):
         weights = self.arch_weights(cat=False)
         combination = torch.argmax(weights, -1)

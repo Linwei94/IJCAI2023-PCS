@@ -6,7 +6,7 @@ import numpy as np
 from torch import nn, optim
 from torch.nn import functional as F
 
-from metrics.ece import ECELoss
+from metrics.metrics import ECELoss
 
 
 class ModelWithTemperature(nn.Module):

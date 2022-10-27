@@ -182,25 +182,26 @@ class ResNet(nn.Module):
         return self.ops[index.cpu()]
 
     def load_combination_weight(self, combination, weight_folder, model_name):
-
-        saved_model_name = "{}/{}_cross_entropy_{}.model".format(weight_folder, model_name, 350)
-        model_dict = torch.load(str(saved_model_name))
-        # modified_dict = {k[7:]: v for k, v in model_dict.items()}
-        # model_dict.update(modified_dict)
-        self.load_state_dict(model_dict, strict=True)
+        if -1 not in combination:
+            saved_model_name = "{}/{}_cross_entropy_{}.model".format(weight_folder, model_name, 350)
+            model_dict = torch.load(str(saved_model_name))
+            # modified_dict = {k[7:]: v for k, v in model_dict.items()}
+            # model_dict.update(modified_dict)
+            self.load_state_dict(model_dict, strict=True)
 
         for block_name in self.block_names:
             idx = self.block_names.index(block_name)
-            saved_model_name = "{}/{}_cross_entropy_{}.model".format(weight_folder, model_name,
-                combination[idx] + 1)
-            model_dict = torch.load(str(saved_model_name))
-            if block_name == 'fc':
-                modified_dict = {k[3:]: v for k, v in model_dict.items() if k.startswith(block_name)}
-                model_dict.update(modified_dict)
-            else:
-                modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith(block_name)}
-                model_dict.update(modified_dict)
-            getattr(self, block_name).load_state_dict(model_dict, strict=False)
+            if not combination[idx] == -1:
+                saved_model_name = "{}/{}_cross_entropy_{}.model".format(weight_folder, model_name,
+                    combination[idx] + 1)
+                model_dict = torch.load(str(saved_model_name))
+                if block_name == 'fc':
+                    modified_dict = {k[3:]: v for k, v in model_dict.items() if k.startswith(block_name)}
+                    model_dict.update(modified_dict)
+                else:
+                    modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith(block_name)}
+                    model_dict.update(modified_dict)
+                getattr(self, block_name).load_state_dict(model_dict, strict=False)
 
 
     def forward(self, x):

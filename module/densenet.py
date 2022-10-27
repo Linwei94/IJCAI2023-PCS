@@ -83,7 +83,9 @@ class DenseNet(nn.Module):
         self.model_name = "densenet121"
         self._initialize_alphas()
 
-    def load_combination(self, combination):
+
+    def load_combination_weight(self, combination, weight_folder, model_name):
+        self.weight_root = weight_folder
         saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, 350)
         model_dict = torch.load(str(saved_model_name))
         self.load_state_dict(model_dict, strict=True)
@@ -140,6 +142,62 @@ class DenseNet(nn.Module):
         model_dict.update(modified_dict)
         getattr(self, 'linear').load_state_dict(model_dict, strict=False)
 
+    def load_combination(self, combination):
+        saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, 350)
+        model_dict = torch.load(str(saved_model_name))
+        self.load_state_dict(model_dict, strict=True)
+
+        # layer 1
+        saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name,
+                                                                 combination[0] + 1)
+        model_dict = torch.load(str(saved_model_name))
+        modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith('dense1')}
+        modified_dict2 = {k[7:]: v for k, v in model_dict.items() if k.startswith('trans1')}
+        model_dict.update(modified_dict)
+        model_dict.update(modified_dict2)
+        getattr(self, 'dense1').load_state_dict(model_dict, strict=False)
+        getattr(self, 'trans1').load_state_dict(model_dict, strict=False)
+
+        # layer 2
+        saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name,
+                                                                 combination[1] + 1)
+        model_dict = torch.load(str(saved_model_name))
+        modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith('dense2')}
+        modified_dict2 = {k[7:]: v for k, v in model_dict.items() if k.startswith('trans2')}
+        model_dict.update(modified_dict)
+        model_dict.update(modified_dict2)
+        getattr(self, 'dense2').load_state_dict(model_dict, strict=False)
+        getattr(self, 'trans2').load_state_dict(model_dict, strict=False)
+
+        # layer 3
+        saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name,
+                                                                 combination[2] + 1)
+        model_dict = torch.load(str(saved_model_name))
+        modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith('dense3')}
+        modified_dict2 = {k[7:]: v for k, v in model_dict.items() if k.startswith('trans3')}
+        model_dict.update(modified_dict)
+        model_dict.update(modified_dict2)
+        getattr(self, 'dense3').load_state_dict(model_dict, strict=False)
+        getattr(self, 'trans3').load_state_dict(model_dict, strict=False)
+
+        # layer 4
+        saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name,
+                                                                 combination[3] + 1)
+        model_dict = torch.load(str(saved_model_name))
+        modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith('dense4')}
+        modified_dict2 = {k[3:]: v for k, v in model_dict.items() if k.startswith('bn')}
+        model_dict.update(modified_dict)
+        model_dict.update(modified_dict2)
+        getattr(self, 'dense4').load_state_dict(model_dict, strict=False)
+        getattr(self, 'bn').load_state_dict(model_dict, strict=False)
+
+        # layer 4
+        saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name,
+                                                                 combination[4] + 1)
+        model_dict = torch.load(str(saved_model_name))
+        modified_dict = {k[7:]: v for k, v in model_dict.items() if k.startswith('linear')}
+        model_dict.update(modified_dict)
+        getattr(self, 'linear').load_state_dict(model_dict, strict=False)
     def _make_dense_layers(self, block, in_planes, nblock):
         layers = []
         for i in range(nblock):
@@ -240,6 +298,7 @@ class DenseNet(nn.Module):
 
     def arch_parameters(self) -> List[torch.tensor]:
         return [self.alphas]
+
 
 def densenet121(temp=1.0, **kwargs):
     return DenseNet(Bottleneck, [6,12,24,16], growth_rate=32, temp=temp, **kwargs)
