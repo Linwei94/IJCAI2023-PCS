@@ -54,8 +54,6 @@ def main():
     cudnn.deterministic = True
 
     args.weight_root = "../weights/{}/{}".format(args.dataset_name, args.model_name)
-    args.load_memory = "../checkpoints/{}-{}".format(args.dataset_name,
-                                                     args.model_name) if not args.load_memory == "build_memory" else None
     # Taking input for the dataset
 
     CIFAR_CLASSES = 10
