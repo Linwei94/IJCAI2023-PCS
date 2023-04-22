@@ -25,22 +25,3 @@ python train.py --model resnet50 --dataset-root DATASET_DIR --loss cross_entropy
 python test_combination.py --dataset cifar10 --model resnet50 --tune_epoch 1 --combination 186,313,299,139,189 -log --weight_folder WEIGHT_DIR --lr=1e-4
 ```
 
-
-[//]: # (## Citation)
-
-[//]: # (If you use any part of this code in your research, please cite our paper:)
-
-[//]: # (```)
-
-[//]: # (@inproceedings{li2020neural,)
-
-[//]: # (    title={Neural Architecture Search in A Proxy Validation Loss Landscape},)
-
-[//]: # (    author={Li, Yanxi and Dong, Minjing and Wang, Yunhe and Xu, Chang},)
-
-[//]: # (    booktitle={Proceedings of the 37th International Conference on Machine Learning},)
-
-[//]: # (    year={2020})
-
-[//]: # (})
-```
