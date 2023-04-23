@@ -31,12 +31,11 @@ python test_combination.py --dataset cifar10 --model resnet50 --tune_epoch 1 --c
 
 If you are using the code/data in this repo, please consider citing:
 
-
-<> (@inproceedings{wang2021learning,
-         title={Learning to Weight Imperfect Demonstrations},
-         author={Wang, Yunke and Xu, Chang and Du, Bo and Lee, Honglak},
-         booktitle={International Conference on Machine Learning},
-         pages={10961--10970},
-         year={2021},
-         organization={PMLR}
-       })
+@misc{tao2023calibrating,
+      title={Calibrating a Deep Neural Network with Its Predecessors}, 
+      author={Linwei Tao and Minjing Dong and Daochang Liu and Changming Sun and Chang Xu},
+      year={2023},
+      eprint={2302.06245},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
