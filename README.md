@@ -31,6 +31,8 @@ python test_combination.py --dataset cifar10 --model resnet50 --tune_epoch 1 --c
 ## Citations
 
 If you are using the code/data in this repo, please consider citing:
+
+```
       @inproceedings{ijcai2021-0434,
         title     = {Calibrating a Deep Neural Network with Its Predecessors}, 
         author    = {Linwei Tao and Minjing Dong and Daochang Liu and Changming Sun and Chang Xu},
