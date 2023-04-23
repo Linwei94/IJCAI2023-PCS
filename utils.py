@@ -447,5 +447,6 @@ def get_gdrive_link_with_idx(index):
     # get weight link
     link = name_link[file_name]
     return file_name, link
-        
+
+get_gdrive_link_with_idx(19)
     
