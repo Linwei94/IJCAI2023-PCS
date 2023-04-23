@@ -147,7 +147,7 @@ class ResNet(nn.Module):
 
         for block_name in self.block_names:
             idx = self.block_names.index(block_name)
-            saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, self.ops[index[idx]] + 1)
+            saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, self.ops[index[idx]])
             model_dict = torch.load(str(saved_model_name))
             if block_name == 'fc':
                 modified_dict = {k[3:]: v for k, v in model_dict.items() if k.startswith(block_name)}
@@ -168,7 +168,7 @@ class ResNet(nn.Module):
 
         for block_name in self.block_names:
             idx = self.block_names.index(block_name)
-            saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, self.ops[index[idx]] + 1)
+            saved_model_name = "{}/{}_cross_entropy_{}.model".format(self.weight_root, self.model_name, self.ops[index[idx]])
             model_dict = torch.load(str(saved_model_name))
             if block_name == 'fc':
                 modified_dict = {k[3:]: v for k, v in model_dict.items() if k.startswith(block_name)}
@@ -193,7 +193,7 @@ class ResNet(nn.Module):
             idx = self.block_names.index(block_name)
             if not combination[idx] == -1:
                 saved_model_name = "{}/{}_cross_entropy_{}.model".format(weight_folder, model_name,
-                    combination[idx] + 1)
+                    combination[idx])
                 model_dict = torch.load(str(saved_model_name))
                 if block_name == 'fc':
                     modified_dict = {k[3:]: v for k, v in model_dict.items() if k.startswith(block_name)}
