@@ -269,7 +269,6 @@ if __name__ == "__main__":
 
     best_val_acc = 0
     for epoch in range(start_epoch, num_epochs):
-        scheduler.step()
         if (args.loss_function == 'focal_loss' and args.gamma_schedule == 1):
             if (epoch < args.gamma_schedule_step1):
                 gamma = args.gamma
@@ -289,6 +288,8 @@ if __name__ == "__main__":
                                         gamma=gamma,
                                         lamda=args.lamda,
                                         loss_mean=args.loss_mean)
+        scheduler.step()
+
         val_loss = test_single_epoch(epoch,
                                      net,
                                      val_loader,
