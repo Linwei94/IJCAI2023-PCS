@@ -1,10 +1,11 @@
 # [Calibrating a Deep Neural Network with Its Predecessors](https://arxiv.org/abs/2302.06245)
-
+Good news! We provided a [colab playground](https://colab.research.google.com/drive/1TjwzG962eyOF51zzqlWLwv3Wq-lgMHZM?usp=sharing) where you can build your own **Predecessors Combination** and see its perforamnce!
 
 > A PyTorch implementation for _Calibrating a Deep Neural Network with Its Predecessors_. Licensed under the Apache License, Version 2.0.
 > 
 > **This project is based on [Focal Calibration](https://github.com/torrvision/focal_calibration).**
 > 
+
 
 ## Requirements
 ```
