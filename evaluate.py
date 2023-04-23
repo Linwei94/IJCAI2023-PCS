@@ -13,10 +13,10 @@ import data.cifar100 as cifar100
 import data.tiny_imagenet as tiny_imagenet
 
 # Import network architectures
-from net.resnet_tiny_imagenet import resnet50 as resnet50_ti
-from net.resnet import resnet50, resnet110
-from net.wide_resnet import wide_resnet_cifar
-from net.densenet import densenet121
+from module.resnet_tiny_imagenet import resnet50 as resnet50_ti
+from module.resnet import resnet50, resnet110
+from module.wide_resnet import wide_resnet_cifar
+from module.densenet import densenet121
 
 # Import metrics to compute
 from metrics.metrics import test_classification_net_logits
