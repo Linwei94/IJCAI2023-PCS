@@ -426,3 +426,26 @@ def get_search_arguments():
     logging.getLogger().addHandler(fh)
 
     return args
+
+
+# get weight file name and link with weight index
+def get_gdrive_link_with_idx(index):
+    name_link = {}
+    # read csv file
+    with open('google_drive_weight_list.csv', 'r') as f:
+        # read one single line
+        line = f.readline()
+        while line:
+            # split line by comma
+            line = line.split(',')
+            # get weight file name and link
+            name_link[line[0]] = line[1]
+            # read next line
+            line = f.readline()
+    # get weight file name
+    file_name = f'resnet50_cross_entropy_{index}.model'
+    # get weight link
+    link = name_link[file_name]
+    return file_name, link
+        
+    
