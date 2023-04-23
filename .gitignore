@@ -6,3 +6,4 @@
 *.pdf
 checkpoints
 __pycache__/
+weights/
