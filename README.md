@@ -6,6 +6,9 @@
 > **This project is based on [Focal Calibration](https://github.com/torrvision/focal_calibration).**
 > 
 
+## Playground
+Good news! We provided a [colab playground](https://colab.research.google.com/drive/1TjwzG962eyOF51zzqlWLwv3Wq-lgMHZM?usp=sharing) where you can build your own **Predecessors Combination** and see its perforamnce!
+
 ## Requirements
 ```
 Python >= 3.7.5, PyTorch == 1.3.1, torchvision == 0.4.2
