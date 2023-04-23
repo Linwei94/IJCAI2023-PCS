@@ -439,7 +439,7 @@ def get_gdrive_link_with_idx(index):
             # split line by comma
             line = line.split(',')
             # get weight file name and link
-            name_link[line[0]] = line[1][:-2]
+            name_link[line[0]] = line[1][:-1]
             # read next line
             line = f.readline()
     # get weight file name
