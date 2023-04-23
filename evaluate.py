@@ -13,14 +13,14 @@ import data.cifar100 as cifar100
 import data.tiny_imagenet as tiny_imagenet
 
 # Import network architectures
-from Net.resnet_tiny_imagenet import resnet50 as resnet50_ti
-from Net.resnet import resnet50, resnet110
-from Net.wide_resnet import wide_resnet_cifar
-from Net.densenet import densenet121
+from net.resnet_tiny_imagenet import resnet50 as resnet50_ti
+from net.resnet import resnet50, resnet110
+from net.wide_resnet import wide_resnet_cifar
+from net.densenet import densenet121
 
 # Import metrics to compute
-from Metrics.metrics import test_classification_net_logits
-from Metrics.metrics import ECELoss, AdaptiveECELoss, ClasswiseECELoss
+from metrics.metrics import test_classification_net_logits
+from metrics.metrics import ECELoss, AdaptiveECELoss, ClasswiseECELoss
 
 # Import temperature scaling and NLL utilities
 from temperature_scaling import ModelWithTemperature

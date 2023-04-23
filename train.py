@@ -305,7 +305,7 @@ if __name__ == "__main__":
                                       loss_function=args.loss_function,
                                       gamma=gamma,
                                       lamda=args.lamda)
-        _, val_acc, _, _, _ = test_classification_net(net, val_loader, device)
+        _, val_acc, _, _, _, _ = test_classification_net(net, val_loader, device)
 
         # training_set_loss[epoch] = train_loss
         val_set_loss[epoch] = val_loss
