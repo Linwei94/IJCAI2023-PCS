@@ -26,3 +26,17 @@ python train.py --model resnet50 --dataset-root DATASET_DIR --loss cross_entropy
 python test_combination.py --dataset cifar10 --model resnet50 --tune_epoch 1 --combination 186,313,299,139,189 -log --weight_folder WEIGHT_DIR --lr=1e-4
 ```
 
+
+## Citations
+
+If you are using the code/data in this repo, please consider citing:
+
+
+<> (@inproceedings{wang2021learning,
+         title={Learning to Weight Imperfect Demonstrations},
+         author={Wang, Yunke and Xu, Chang and Du, Bo and Lee, Honglak},
+         booktitle={International Conference on Machine Learning},
+         pages={10961--10970},
+         year={2021},
+         organization={PMLR}
+       })
