@@ -33,12 +33,10 @@ python test_combination.py --dataset cifar10 --model resnet50 --tune_epoch 1 --c
 If you are using the code/data in this repo, please consider citing:
 
 ```
-@misc{tao2023calibrating,
-      title={Calibrating a Deep Neural Network with Its Predecessors}, 
-      author={Linwei Tao and Minjing Dong and Daochang Liu and Changming Sun and Chang Xu},
-      year={2023},
-      eprint={2302.06245},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG}
-      }
+@article{tao2023calibrating,
+  title={Calibrating a deep neural network with its predecessors},
+  author={Tao, Linwei and Dong, Minjing and Liu, Daochang and Sun, Changming and Xu, Chang},
+  journal={arXiv preprint arXiv:2302.06245},
+  year={2023}
+}
 ```
